@@ -203,3 +203,97 @@ class anomaly_two:
 class anomaly_three():
     def __init__(self, width, height, screen_width, screen_height, assets):
         self.width = width
+        self.height = height
+        self.screen_width = screen_width
+        self.screen_height = screen_height
+
+        self.image = pygame.transform.scale(assets["anomaly_three"], (width, height))
+        self.rect = self.image.get_rect()
+
+        self.active = False
+        self.game_over = False
+
+        self.state = "idle"
+        self.warning_dur = 3000
+        self.fall_dur = 1000
+
+        self.spawn_time = 0
+        self.fall_start_time = 0
+
+        self.indicator_pos = None
+        self.start_pos = None
+        self.target_pos = None
+
+    def handle_spawn(self):
+        self.active = True
+        self.game_over = False
+        self.state = "warning"
+        self.spawn_time = pygame.time.get_ticks()
+        self.fall_start_time = 0
+
+        #spawn above screen
+        self.start_pos = (self.screen_width // 2 - self.width // 2, -self.height)
+        self.rect.topleft = self.start_pos
+
+        #random target zone
+        margin = 80
+        target_x = random.randint(margin, self.screen_width - margin - self.width)
+        target_y = random.randint(self.height + 60, self.screen_height - self.height - 60)
+
+        self.target_pos = (target_x, target_y)
+        self.indicator_pos = self.target_pos
+
+        print("Fatass spawned!")
+
+    def handle_update(self, player_rect):
+        if not self.active:
+            return
+
+        now = pygame.time.get_ticks()
+
+        if self.state == "warning":
+            if now - self.spawn_time >= self.warning_dur:
+                self.state = "falling"
+                self.fall_start_time = now
+            return
+        
+        if self.state == "falling":
+            elapsed = now - self.fall_start_time
+            progress = min(elapsed / self.fall_dur, 1.0)
+        
+            start_x, start_y = self.start_pos
+            target_x, target_y = self.target_pos
+
+            x = int(start_x + (target_x - start_x) * progress)
+            y = int(start_y + (target_y - start_y) * progress)
+
+            self.rect.center = (x, y)
+
+            if progress >= 1.0:
+                self.state = "landed"
+                self.game_over = self.rect.colliderect(player_rect)
+                self.handle_despawn()
+            return
+    
+    def handle_despawn(self):
+        self.active = False
+        self.state = "idle"
+        self.indicator_pos = None
+        self.start_pos = None
+        self.target_pos = None
+        self.fall_start_time = 0
+    
+    def draw(self, screen):
+        if not self.active:
+            return
+        
+        if self.state == "warning" and self.indicator_pos:
+            x, y = self.indicator_pos
+            pygame.draw.ellipse(screen, (120, 120, 120), (x - 50, y - 30, 100, 60), 3)
+            pygame.draw.circle(screen, (220, 220, 220), (x, y), 9)
+        
+        if self.state in ("falling", "landed"):
+            x, y = self.indicator_pos
+            pygame.draw.ellipse(screen, (120, 120, 120), (x - 50, y - 30, 100, 60), 3)
+            pygame.draw.circle(screen, (220, 220, 220), (x, y), 9)
+            screen.blit(self.image, self.rect)
