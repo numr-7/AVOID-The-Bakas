@@ -9,6 +9,24 @@ def load_assets():
         "anomaly_one": pygame.image.load(os.path.join(base, "miku.png")).convert_alpha(),
         "anomaly_two": pygame.image.load(os.path.join(base, "neru.png")).convert_alpha(),
         "anomaly_three": pygame.image.load(os.path.join(base, "teto.png")).convert_alpha(),
+        "miku_spawn_sfx": [
+            # pygame.mixer.Sound(os.path.join(base, "jet2-miku.mp3")),
+            pygame.mixer.Sound(os.path.join(base, "mikudayo.mp3"))
+        ],
+        "neru_spawn_sfx": [
+            pygame.mixer.Sound(os.path.join(base, "neru_phone.mp3"))
+        ],
+        "teto_spawn_sfx": [
+            pygame.mixer.Sound(os.path.join(base, "kasane-teto.mp3")),
+            pygame.mixer.Sound(os.path.join(base, "teetoo.mp3")),
+            pygame.mixer.Sound(os.path.join(base, "teto-wav.mp3"))
+        ],
+        "collectible": [
+            pygame.image.load(os.path.join(base, "bakso.png")),
+            pygame.image.load(os.path.join(base, "mieayam.png")),
+            pygame.image.load(os.path.join(base, "sateayam.png")),
+            pygame.image.load(os.path.join(base, "nasi_ayam_bakar.png"))
+        ]
     }
 
 class player:
@@ -48,6 +66,39 @@ class player:
     def get_rect(self):
         return self.rect
 
+class collectible:
+    def __init__(self, width, height, screen_width, screen_height, assets):
+        self.width = width
+        self.height = height
+        self.screen_width = screen_width
+        self.screen_height = screen_height
+        self.item_choices = assets["collectible"]
+
+        self.image = None
+        self.rect = pygame.Rect(0, 0, self.width, self.height)
+        self.active = False
+
+    def handle_spawn(self):
+        self.image = pygame.transform.scale(random.choice(self.item_choices), (self.width, self.height))
+        self.rect.size = self.image.get_size()
+        self.rect.x = random.randint(20, self.screen_width - 50)
+        self.rect.y = random.randint(20, self.screen_height - 50)
+        self.active = True
+
+    def handle_update(self, player_rect):
+        if not self.active:
+            return False
+
+        if self.rect.colliderect(player_rect):
+            self.active = False
+            return True
+
+        return False
+
+    def draw(self, screen):
+        if self.active:
+            screen.blit(self.image, self.rect)
+
 class anomaly_one:
     def __init__(self, width, height,  screen_width, screen_height, assets):
         self.width = width
@@ -65,6 +116,8 @@ class anomaly_one:
 
         #hit
         self.game_over = False
+
+        self.spawn_sfx = assets["miku_spawn_sfx"]
     
     def handle_spawn(self):
         random_x = random.randint(0, self.screen_width - self.width)
@@ -73,6 +126,9 @@ class anomaly_one:
         self.rect.topleft = (random_x, random_y)
         self.spawntime = pygame.time.get_ticks()
         self.active = True
+
+        sfx = random.choice(self.spawn_sfx)
+        sfx.play()
         print("Miku Spawned!!")
 
     def handle_despawn(self):
@@ -107,6 +163,8 @@ class anomaly_two:
         self.spawntime = 0
         self.lifespan = 5000
 
+        self.spawn_sfx = assets["neru_spawn_sfx"]
+
         #attack
         self.game_over = False
         self.attack_start = None
@@ -128,6 +186,8 @@ class anomaly_two:
         self.rect.topleft = (random_x, random_y)
         self.spawntime = pygame.time.get_ticks()
         self.active = True
+        sfx = random.choice(self.spawn_sfx)
+        sfx.play()
 
         self.attack_start = self.rect.center
         random_dest_x = random.randint(0, self.screen_width)
@@ -213,6 +273,8 @@ class anomaly_three():
         self.active = False
         self.game_over = False
 
+        self.spawn_sfx = assets["teto_spawn_sfx"]
+
         self.state = "idle"
         self.warning_dur = 3000
         self.fall_dur = 1000
@@ -230,6 +292,7 @@ class anomaly_three():
         self.state = "warning"
         self.spawn_time = pygame.time.get_ticks()
         self.fall_start_time = 0
+
 
         #spawn above screen
         self.start_pos = (self.screen_width // 2 - self.width // 2, -self.height)
@@ -255,6 +318,8 @@ class anomaly_three():
             if now - self.spawn_time >= self.warning_dur:
                 self.state = "falling"
                 self.fall_start_time = now
+                sfx = random.choice(self.spawn_sfx)
+                sfx.play()
             return
         
         if self.state == "falling":
