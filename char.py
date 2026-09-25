@@ -202,4 +202,4 @@ class anomaly_two:
 
 class anomaly_three():
     def __init__(self, width, height, screen_width, screen_height, assets):
-        
+        self.width = width
